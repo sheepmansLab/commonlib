@@ -43,18 +43,41 @@ public class CalendarUtil {
 	//Calendarから年を取得
 	public static int getYear(Calendar cal){
 		return cal.get(Calendar.YEAR);
-		
 	}
 	
 	//Calendarから月を取得
 	public static int getMonth(Calendar cal){
 		return (cal.get(Calendar.MONTH) + 1);
-		
 	}
 	//Calendarから日を取得
 	public static int getDate(Calendar cal){
 		return cal.get(Calendar.DATE);
-		
+	}
+	
+	/**
+	 * 当月の初日を返す
+	 * @param cal
+	 * @return
+	 */
+	public static Calendar getMonthFirstDate(Calendar cal){
+		Calendar ret = Calendar.getInstance();
+		ret.setTime(cal.getTime());
+		ret.set(Calendar.DATE, 1);
+		return ret;
+	}
+	
+	/**
+	 * 当月の最終日を返す
+	 * @param cal
+	 * @return
+	 */
+	public static Calendar getMonthLastDate(Calendar cal){
+		Calendar ret = Calendar.getInstance();
+		ret.setTime(cal.getTime());
+		ret.set(Calendar.DATE, 1);
+		ret.add(Calendar.MONTH, 1);
+		ret.add(Calendar.DATE, -1);
+		return ret;
 	}
 	
 	/**
