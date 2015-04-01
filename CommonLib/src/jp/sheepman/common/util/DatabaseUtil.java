@@ -123,8 +123,8 @@ public class DatabaseUtil {
 	 * @param whereClause	Where句
 	 * @param whereArgs		Whereバインド
 	 */
-	public void delete(String tablename, String whereClause, String[] whereArgs){
-		db.delete(tablename, whereClause, whereArgs);
+	public void delete(String tablename, String whereClause, List<String> list){
+		db.delete(tablename, whereClause, list.toArray(new String[0]));
 	}
 	
 	/**
