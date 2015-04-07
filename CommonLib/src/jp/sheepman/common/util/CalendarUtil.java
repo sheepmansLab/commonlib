@@ -12,24 +12,29 @@ public class CalendarUtil {
 	
 	//文字列⇒Calendar変換
 	public static Calendar str2cal(String str){
-		Calendar cal = Calendar.getInstance(Locale.JAPAN);
-		cal.set(Calendar.YEAR, Integer.parseInt(str.split(SEPARATER)[0]));
-		cal.set(Calendar.MONTH, Integer.parseInt(str.split(SEPARATER)[1])-1);
-		cal.set(Calendar.DATE, Integer.parseInt(str.split(SEPARATER)[2]));
-		cal.set(Calendar.HOUR, 0);
-		cal.set(Calendar.MINUTE, 0);
-		cal.set(Calendar.SECOND, 0);
+		Calendar cal = null;
+		if(str != null && str.length() > 0){
+			cal = Calendar.getInstance(Locale.JAPAN);
+			cal.set(Calendar.YEAR, Integer.parseInt(str.split(SEPARATER)[0]));
+			cal.set(Calendar.MONTH, Integer.parseInt(str.split(SEPARATER)[1])-1);
+			cal.set(Calendar.DATE, Integer.parseInt(str.split(SEPARATER)[2]));
+			cal.set(Calendar.HOUR, 0);
+			cal.set(Calendar.MINUTE, 0);
+			cal.set(Calendar.SECOND, 0);
+		}
 		return cal;
 	}
 
 	//Calendar⇒文字列変換
 	public static String cal2str(Calendar cal){
 		StringBuffer sb = new StringBuffer();
-		sb.append(String.format("%1$04d", getYear(cal)))
-			.append(SEPARATER)
-			.append(String.format("%1$02d", getMonth(cal)))
-			.append(SEPARATER)
-			.append(String.format("%1$02d", getDate(cal)));
+		if(cal != null){
+			sb.append(String.format("%1$04d", getYear(cal)))
+				.append(SEPARATER)
+				.append(String.format("%1$02d", getMonth(cal)))
+				.append(SEPARATER)
+				.append(String.format("%1$02d", getDate(cal)));
+		}
 		return sb.toString();
 	}
 	
