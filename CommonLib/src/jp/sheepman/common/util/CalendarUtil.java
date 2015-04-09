@@ -18,9 +18,10 @@ public class CalendarUtil {
 			cal.set(Calendar.YEAR, Integer.parseInt(str.split(SEPARATER)[0]));
 			cal.set(Calendar.MONTH, Integer.parseInt(str.split(SEPARATER)[1])-1);
 			cal.set(Calendar.DATE, Integer.parseInt(str.split(SEPARATER)[2]));
-			cal.set(Calendar.HOUR, 0);
-			cal.set(Calendar.MINUTE, 0);
-			cal.set(Calendar.SECOND, 0);
+			cal.clear(Calendar.HOUR);
+			cal.clear(Calendar.MINUTE);
+			cal.clear(Calendar.SECOND);
+			cal.clear(Calendar.MILLISECOND);
 		}
 		return cal;
 	}
@@ -121,5 +122,49 @@ public class CalendarUtil {
 		}
 		//指定したフィールドの数値を返却
 		return sia.get(type);
+	}
+	
+	/**
+	 * 当日のCalendarを返却
+	 * @return 当日日付(時間以下は切り捨て)
+	 */
+	public static Calendar getToday(){
+		Calendar cal = Calendar.getInstance(Locale.JAPAN);
+		return truncateUnderHour(cal);
+	}
+	
+	/**
+	 * 別インスタンスでカレンダーを複製
+	 * @param cal
+	 * @return
+	 */
+	public static Calendar clone(Calendar cal){
+		return (Calendar)cal.clone();
+	}
+	
+	/**
+	 * 時間以下を切り捨てる
+	 * @return 
+	 */
+	public static Calendar truncateUnderHour(Calendar cal){
+		cal.clear(Calendar.HOUR);
+		cal.clear(Calendar.MINUTE);
+		cal.clear(Calendar.SECOND);
+		cal.clear(Calendar.MILLISECOND);
+		return cal;
+	}
+	
+	/**
+	 * 当日か否かを判別する
+	 * @param cal
+	 * @return
+	 */
+	public static boolean isToday(Calendar cal){
+		boolean ret = false;
+		Calendar tmp = clone(cal);
+		if(getToday().compareTo(tmp) == 0){
+			ret = true;
+		}
+		return ret;
 	}
 }
