@@ -26,6 +26,9 @@ import android.database.sqlite.SQLiteOpenHelper;
  *
  */
 public class DatabaseUtil {
+	private final String DIR_DB_PROPS = "sql";
+	private final String FILE_DB_PROP = "database.properties";
+	private final String DB_NAME_DEFAULT = "database.sqlite";
 	private final String KEYWORD_GETTER = "get";
 	private final String KEYWORD_SETTER = "set";
 	//SQLiteOpenHelperのカスタムクラス
@@ -38,8 +41,42 @@ public class DatabaseUtil {
 	 * @param context
 	 */
 	public DatabaseUtil(Context context) {
-		helper = new DatabaseHelper(context);
+		//DB名にデフォルトをセット
+		String DB_NAME = DB_NAME_DEFAULT;
+		//assetから情報を取得する
+		AssetManager as = context.getAssets();
+		BufferedReader br = null;
+		try{
+			//指定ディレクトリ配下のファイルを取得
+			String[] files = as.list(DIR_DB_PROPS);
+			for(String f : files){
+				//指定ファイルであれば読み込み
+				if(f.equals(FILE_DB_PROP)){
+					//ファイルをオープンする
+					br = new BufferedReader(new InputStreamReader(as.open(DIR_DB_PROPS+"/"+f), "UTF-8"));
+					//1行のみ読み込み TODO 複数設定対応
+					String str = br.readLine();
+					//空でなければセット
+					if(str != null){
+						DB_NAME = str;
+					}
+				}
+			}
+		} catch(IOException e) {
+			e.printStackTrace();
+		} finally {
+			if(br != null ){
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		helper = new DatabaseHelper(DB_NAME, context);
 	}
+
+
 	
 	/**
 	 * データベースのオープン
@@ -251,16 +288,13 @@ public class DatabaseUtil {
 	
 	//sqlite接続用のHelperクラス
 	private class DatabaseHelper extends SQLiteOpenHelper {
-		
-		private static final String DB_NAME = "database.sqlite";
-		
 		private Context context;
 		
 		/**
 		 * コンストラクタ
 		 * @param context	Context
 		 */
-		public DatabaseHelper(Context context) {
+		public DatabaseHelper(String DB_NAME, Context context) {
 			// DBの名前は固定
 			// CursorFactoryはnull
 			// DBのバージョンは1固定
