@@ -13,7 +13,7 @@ public class CalendarUtil {
 	//文字列⇒Calendar変換
 	public static Calendar str2cal(String str){
 		Calendar cal = null;
-		if(str != null && str.length() > 0){
+		if(str != null && str.split(SEPARATER).length == 3){
 			cal = Calendar.getInstance(Locale.JAPAN);
 			cal.set(Calendar.YEAR, Integer.parseInt(str.split(SEPARATER)[0]));
 			cal.set(Calendar.MONTH, Integer.parseInt(str.split(SEPARATER)[1])-1);

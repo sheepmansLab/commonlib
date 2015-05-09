@@ -96,9 +96,12 @@ public class DatabaseUtil {
 	
 	/**
 	 * Insert処理
+	 * @param tablename
 	 * @param entity
+	 * @return rowid
 	 */
-	public void insert(String tablename, BaseEntity entity){
+	public long insert(String tablename, BaseEntity entity){
+		long rowid = 0;
 		ContentValues values = new ContentValues();
 		try {
 			//Entityクラスのメソッド一覧を取得
@@ -141,7 +144,7 @@ public class DatabaseUtil {
 					}
 				}
 			}
-			db.insert(tablename, "-", values);
+			rowid = db.insert(tablename, "-", values);
 		} catch (IllegalAccessException e) {
 			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
@@ -152,6 +155,7 @@ public class DatabaseUtil {
 			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
 		}
+		return rowid;
 	}
 	
 	/**
