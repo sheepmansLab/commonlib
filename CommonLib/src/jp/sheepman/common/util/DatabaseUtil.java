@@ -1,5 +1,13 @@
 package jp.sheepman.common.util;
 
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.res.AssetManager;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,12 +22,6 @@ import java.util.Map;
 
 import jp.sheepman.common.entity.BaseEntity;
 import jp.sheepman.common.model.BaseModel;
-import android.content.ContentValues;
-import android.content.Context;
-import android.content.res.AssetManager;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 
 /**
  * DB操作のユーティリティ
@@ -28,7 +30,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DatabaseUtil {
 	private final String DIR_DB_PROPS = "sql";
 	private final String FILE_DB_PROP = "database.properties";
+    private final String FILE_VER_PROP = "version.properties";
 	private final String DB_NAME_DEFAULT = "database.sqlite";
+    private final int VERSION_DEFAULT = 1;
 	private final String KEYWORD_GETTER = "get";
 	private final String KEYWORD_SETTER = "set";
 	//SQLiteOpenHelperのカスタムクラス
@@ -41,27 +45,41 @@ public class DatabaseUtil {
 	 * @param context
 	 */
 	public DatabaseUtil(Context context) {
-		//DB名にデフォルトをセット
+		//DB名、バージョンにデフォルトをセット
 		String DB_NAME = DB_NAME_DEFAULT;
+        int VERSION = VERSION_DEFAULT;
 		//assetから情報を取得する
 		AssetManager as = context.getAssets();
 		BufferedReader br = null;
 		try{
-			//指定ディレクトリ配下のファイルを取得
-			String[] files = as.list(DIR_DB_PROPS);
-			for(String f : files){
-				//指定ファイルであれば読み込み
-				if(f.equals(FILE_DB_PROP)){
-					//ファイルをオープンする
-					br = new BufferedReader(new InputStreamReader(as.open(DIR_DB_PROPS+"/"+f), "UTF-8"));
-					//1行のみ読み込み TODO 複数設定対応
-					String str = br.readLine();
-					//空でなければセット
-					if(str != null){
-						DB_NAME = str;
-					}
-				}
-			}
+            //指定ディレクトリ配下のファイルを取得
+            String[] files = as.list(DIR_DB_PROPS);
+            for(String f : files){
+                //指定ファイルであれば読み込み
+                if(f.equals(FILE_DB_PROP)){
+                    //ファイルをオープンする
+                    br = new BufferedReader(new InputStreamReader(as.open(DIR_DB_PROPS+"/"+f), "UTF-8"));
+                    //1行のみ読み込み TODO 複数設定対応
+                    String str = br.readLine();
+                    //空でなければセット
+                    if(str != null){
+                        DB_NAME = str;
+                    }
+                } else if(f.equals(FILE_VER_PROP)) {
+                    //ファイルをオープンする
+                    br = new BufferedReader(new InputStreamReader(as.open(DIR_DB_PROPS+"/"+f), "UTF-8"));
+                    //1行のみ読み込み TODO 複数設定対応
+                    String str = br.readLine();
+                    //空でなければセット
+                    if(str != null){
+                        try {
+                            VERSION = Integer.parseInt(str);
+                        } catch(Exception e) {
+                            //Nothing to do.
+                        }
+                    }
+                }
+            }
 		} catch(IOException e) {
 			e.printStackTrace();
 		} finally {
@@ -73,11 +91,11 @@ public class DatabaseUtil {
 				}
 			}
 		}
-		helper = new DatabaseHelper(DB_NAME, context);
+        Log.d(this.getClass().toString(),"DB_NAME:" + DB_NAME);
+        Log.d(this.getClass().toString(),"VERSION:" + VERSION);
+		helper = new DatabaseHelper(DB_NAME, context, VERSION);
 	}
 
-
-	
 	/**
 	 * データベースのオープン
 	 */
@@ -114,7 +132,7 @@ public class DatabaseUtil {
 						//カラム名であるkey項目はgetterメソッドのgetを外して小文字にしたもの
 						String key = m.getName().replaceFirst(KEYWORD_GETTER, "").toLowerCase(Locale.ENGLISH);
 						//getterメソッドを実行して値を取得する
-						Object value = m.invoke(entity, null);
+						Object value = m.invoke(entity, (Object)null);
 						//値がNULLでない場合、型別にキャストしてセットする
 						if(value != null){
 							if(value instanceof byte[]){
@@ -162,10 +180,10 @@ public class DatabaseUtil {
 	 * delete
 	 * @param tablename		テーブル名
 	 * @param whereClause	Where句
-	 * @param whereArgs		Whereバインド
+	 * @param list		Whereバインド
 	 */
-	public void delete(String tablename, String whereClause, List<String> list){
-		db.delete(tablename, whereClause, list.toArray(new String[0]));
+	public void delete(String tablename, String whereClause, List<String> list) {
+        db.delete(tablename, whereClause, list.toArray(new String[0]));
 	}
 	
 	/**
@@ -187,8 +205,8 @@ public class DatabaseUtil {
 							, m);
 				}
 			}
-			
-			Cursor c = db.rawQuery(sql, params.toArray(new String[0]));
+
+            Cursor c = db.rawQuery(sql, params.toArray(new String[0]));
 			while(c.moveToNext()){
 				BaseEntity entity = model.getEntity();
 				for(int i = 0; i < c.getColumnCount(); i++){
@@ -229,11 +247,13 @@ public class DatabaseUtil {
 		return list;
 	}
 
-	/**
-	 * update
-	 * @param sql
-	 * @param list
-	 */
+    /**
+     * update
+     * @param table
+     * @param whereClause
+     * @param entity
+     * @param list
+     */
 	public void update(String table, String whereClause, BaseEntity entity, List<String> list){
 		ContentValues values = new ContentValues();
 		try {
@@ -247,7 +267,7 @@ public class DatabaseUtil {
 						//カラム名であるkey項目はgetterメソッドのgetを外して小文字にしたもの
 						String key = m.getName().replaceFirst(KEYWORD_GETTER, "").toLowerCase(Locale.ENGLISH);
 						//getterメソッドを実行して値を取得する
-						Object value = m.invoke(entity, null);
+						Object value = m.invoke(entity, (Object)null);
 						//値がNULLでない場合、型別にキャストしてセットする
 						if(value != null){
 							if(value instanceof byte[]){
@@ -293,18 +313,17 @@ public class DatabaseUtil {
 	//sqlite接続用のHelperクラス
 	private class DatabaseHelper extends SQLiteOpenHelper {
 		private Context context;
-		
-		/**
-		 * コンストラクタ
-		 * @param context	Context
-		 */
-		public DatabaseHelper(String DB_NAME, Context context) {
-			// DBの名前は固定
-			// CursorFactoryはnull
-			// DBのバージョンは1固定
-			super(context, DB_NAME, null, 1);
-			this.context = context;
-		}
+
+        /**
+         * コンストラクタ
+         * @param DB_NAME   データベース名
+         * @param context   Context
+         * @param VERSION   バージョン
+         */
+        public DatabaseHelper(String DB_NAME, Context context, int VERSION){
+            super(context, DB_NAME, null, VERSION);
+            this.context = context;
+        }
 		
 		/**
 		 * DBが存在しない場合に呼ばれるメソッド
@@ -324,8 +343,15 @@ public class DatabaseUtil {
 		 */
 		@Override
 		public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-			// とりあえず何もしない
-		}
+            //テーブルを退避する
+            this.execSQL(db, "sql/escape");
+            //テーブルをCreateする
+            this.execSQL(db, "sql/create");
+            //データを移行する
+            this.execSQL(db, "sql/trans");
+            //退避テーブルを削除する
+            this.execSQL(db, "sql/drop");
+        }
 		
 		/**
 		 * assetのSQLファイルを読み込んで実行する
@@ -334,19 +360,27 @@ public class DatabaseUtil {
 		private void execSQL(SQLiteDatabase sqldb ,String dir){
 			AssetManager as = context.getAssets();
 			try{
+                //ファイル名を取得
 				String[] files = as.list(dir);
-				for(int i = 0; i < files.length; i ++){
-					String str = readFile(as.open(dir + "/" + files[i]));
-					for(String sql : str.split("/")){
-						if(sql.replaceAll(" ", "").length() > 0){
-							sqldb.execSQL(sql);
-						}
-					}
-				}
+				//ファイル毎に処理を実行
+                if(files != null){
+                    for(int i = 0; i < files.length; i ++){
+                        //ファイル内の文字列を取得
+                        String str = readFile(as.open(dir + "/" + files[i]));
+                        //文字列をSQL毎に分割
+                        if(str != null){
+                            for(String sql : str.split("/")){
+                                //SQLがあれば実行
+                                if(sql.replaceAll(" ", "").length() > 0){
+                                    sqldb.execSQL(sql);
+                                }
+                            }
+                        }
+                    }
+                }
 			} catch(IOException e) {
 				e.printStackTrace();
 			}
-			
 		}
 
 	    /** 
