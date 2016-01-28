@@ -12,8 +12,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.Format;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -132,7 +135,7 @@ public class DatabaseUtil {
 						//カラム名であるkey項目はgetterメソッドのgetを外して小文字にしたもの
 						String key = m.getName().replaceFirst(KEYWORD_GETTER, "").toLowerCase(Locale.ENGLISH);
 						//getterメソッドを実行して値を取得する
-						Object value = m.invoke(entity, (Object)null);
+						Object value = m.invoke(entity);
 						//値がNULLでない場合、型別にキャストしてセットする
 						if(value != null){
 							if(value instanceof byte[]){
@@ -248,13 +251,193 @@ public class DatabaseUtil {
 	}
 
     /**
+     * Select
+     * @param sql
+     * @param params
+     * @param entityClass
+     * @return List
+     */
+    public List<BaseEntity> select(String sql, List<String> params, Class<? extends BaseEntity> entityClass){
+        List<BaseEntity> list = new ArrayList<BaseEntity>();
+        try{
+            Map<String, Method> map = new HashMap<String, Method>();
+            for(Method m :entityClass.getDeclaredMethods()){
+                if(m.getName().startsWith(KEYWORD_SETTER)){
+                    map.put(m.getName()
+                            .replaceFirst(KEYWORD_SETTER, "")
+                            .toLowerCase(Locale.ENGLISH)
+                            , m);
+                }
+            }
+
+            Cursor c = db.rawQuery(sql, params.toArray(new String[0]));
+            while(c.moveToNext()){
+                BaseEntity entity = entityClass.newInstance();
+                for(int i = 0; i < c.getColumnCount(); i++){
+                    String key = c.getColumnName(i)
+                            .replaceFirst(KEYWORD_SETTER, "")
+                            .toLowerCase(Locale.ENGLISH);
+                    if(map.containsKey(key)){
+                        Object value;
+                        if(c.getType(i) == Cursor.FIELD_TYPE_BLOB){
+                            value = c.getBlob(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_FLOAT){
+                            value = c.getFloat(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_INTEGER){
+                            value = c.getInt(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_STRING){
+                            value = c.getString(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_NULL){
+                            value = null;
+                        } else {
+                            value = c.getString(i);
+                        }
+                        map.get(key).invoke(entity, value);
+                    }
+                }
+                list.add(entity);
+            }
+            c.close();
+        } catch (IllegalAccessException e) {
+            // TODO 自動生成された catch ブロック
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            // TODO 自動生成された catch ブロック
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            // TODO 自動生成された catch ブロック
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    /**
+     * Select
+     * @param tablename
+     * @param rowid
+     * @param entityClass
+     * @return List
+     */
+    public BaseEntity select(String tablename, long rowid, Class<? extends BaseEntity> entityClass){
+        String sql = "SELECT * FROM " + tablename + " WHERE ROWID = ? ";
+        String[] params = {String.valueOf(rowid)};
+
+        BaseEntity entity = null;
+        try{
+            entity = entityClass.newInstance();
+            Map<String, Method> map = new HashMap<String, Method>();
+            for(Method m :entityClass.getDeclaredMethods()){
+                if(m.getName().startsWith(KEYWORD_SETTER)){
+                    map.put(m.getName()
+                            .replaceFirst(KEYWORD_SETTER, "")
+                            .toLowerCase(Locale.ENGLISH)
+                            , m);
+                }
+            }
+            Cursor c = db.rawQuery(sql, params);
+            while(c.moveToNext()){
+                for(int i = 0; i < c.getColumnCount(); i++){
+                    String key = c.getColumnName(i)
+                            .replaceFirst(KEYWORD_SETTER, "")
+                            .toLowerCase(Locale.ENGLISH);
+                    if(map.containsKey(key)){
+                        Object value;
+                        if(c.getType(i) == Cursor.FIELD_TYPE_BLOB){
+                            value = c.getBlob(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_FLOAT){
+                            value = c.getFloat(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_INTEGER){
+                            value = c.getInt(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_STRING){
+                            value = c.getString(i);
+                        } else if(c.getType(i) == Cursor.FIELD_TYPE_NULL){
+                            value = null;
+                        } else {
+                            value = c.getString(i);
+                        }
+                        map.get(key).invoke(entity, value);
+                    }
+                }
+            }
+            c.close();
+        } catch (IllegalAccessException e) {
+            // TODO 自動生成された catch ブロック
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            // TODO 自動生成された catch ブロック
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            // TODO 自動生成された catch ブロック
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        }
+        return entity;
+    }
+
+    /**
+     * Count
+     * @param tablename
+     * @param whereClause
+     * @param params
+     * @return
+     */
+    public int count(String tablename,String whereClause, List<String> params){
+        int count = 0;
+        StringBuffer sql = new StringBuffer();
+        sql.append("SELECT count(*) FROM " + tablename);
+        if(whereClause != null){
+            sql.append(" WHERE ");
+            sql.append(whereClause);
+        }
+        try{
+            Cursor c = db.rawQuery(sql.toString(), params.toArray(new String[0]));
+            c.moveToNext();
+            count = c.getInt(0);
+            c.close();
+        } finally {
+
+        }
+        return count;
+    }
+    /**
+     * MaxID
+     * @param tablename
+     * @param entityClass
+     * @return
+     */
+    public int maxId(String tablename, Class<? extends BaseEntity> entityClass){
+        int maxId = 0;
+        String columnName = "";
+        try{
+            for(Field f :entityClass.getDeclaredFields()){
+                for(Annotation a : f.getDeclaredAnnotations()){
+                    if(a instanceof BaseEntity.MaxIdTargetColumn){
+                        columnName = f.getName();
+                    }
+                }
+            }
+            String sql = "SELECT MAX(" + columnName + ") FROM " + tablename;
+            Cursor c = db.rawQuery(sql, null);
+            c.moveToNext();
+            maxId = c.getInt(0);
+            c.close();
+        } finally {
+
+        }
+        return maxId;
+    }
+
+    /**
      * update
      * @param table
      * @param whereClause
      * @param entity
-     * @param list
+     * @param whereParams
      */
-	public void update(String table, String whereClause, BaseEntity entity, List<String> list){
+	public void update(String table, String whereClause, BaseEntity entity, List<String> whereParams){
 		ContentValues values = new ContentValues();
 		try {
 			//Entityクラスのメソッド一覧を取得
@@ -267,7 +450,7 @@ public class DatabaseUtil {
 						//カラム名であるkey項目はgetterメソッドのgetを外して小文字にしたもの
 						String key = m.getName().replaceFirst(KEYWORD_GETTER, "").toLowerCase(Locale.ENGLISH);
 						//getterメソッドを実行して値を取得する
-						Object value = m.invoke(entity, (Object)null);
+						Object value = m.invoke(entity);
 						//値がNULLでない場合、型別にキャストしてセットする
 						if(value != null){
 							if(value instanceof byte[]){
@@ -297,7 +480,7 @@ public class DatabaseUtil {
 					}
 				}
 			}
-			db.update(table, values, whereClause, list.toArray(new String[0]));
+			db.update(table, values, whereClause, whereParams.toArray(new String[0]));
 		} catch (IllegalAccessException e) {
 			// TODO 自動生成された catch ブロック
 			e.printStackTrace();
