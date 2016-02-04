@@ -190,12 +190,14 @@ public class DatabaseUtil {
 	}
 	
 	/**
+     * @deprecated 非推奨
 	 * Select
 	 * @param sql
 	 * @param params
 	 * @param model
 	 * @return
 	 */
+    @Deprecated
 	public List<BaseEntity> select(String sql, List<String> params, BaseModel model){
 		List<BaseEntity> list = new ArrayList<BaseEntity>();
 		try{
