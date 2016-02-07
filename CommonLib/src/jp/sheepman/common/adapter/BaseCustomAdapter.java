@@ -9,10 +9,6 @@ import android.widget.BaseAdapter;
 
 public abstract class BaseCustomAdapter extends BaseAdapter {
     protected List<BaseForm> list;
-    public BaseCustomAdapter() {
-		// TODO 自動生成されたコンストラクター・スタブ
-	}
-
 	/**
 	 * コンストラクタ
 	 * @param context

@@ -1,4 +1,5 @@
 /gen/
 /bin/
 /build/
+.idea
 local.properties
